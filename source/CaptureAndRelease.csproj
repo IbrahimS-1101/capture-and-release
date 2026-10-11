@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>CaptureAndRelease</AssemblyName>
+    <Product>Capture &amp; Release</Product>
+    <Description>Local screen and window recording with application audio.</Description>
+    <ApplicationIcon>recorder.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Authors>Ibrahim Samir</Authors>
+    <Copyright>Copyright (c) 2026 Ibrahim Samir</Copyright>
+    <DebugType>none</DebugType>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=/_/source</PathMap>
+    <Version>0.3.0</Version>
+  </PropertyGroup>
+</Project>
