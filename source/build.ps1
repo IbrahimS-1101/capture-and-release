@@ -8,8 +8,11 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'
 $env:DOTNET_CLI_HOME=Join-Path $buildDirectory 'dotnet-home'
 $env:MSBuildEnableWorkloadResolver='false'
-dotnet build (Join-Path $sourceDirectory 'CaptureAndRelease.csproj') -c Release -o $outputDirectory "-p:BaseIntermediateOutputPath=$buildDirectory\obj-local-screen\" --ignore-failed-sources
-if($LASTEXITCODE -ne 0){throw 'The .NET build failed'}
+Push-Location $sourceDirectory
+try {
+    dotnet build (Join-Path $sourceDirectory 'CaptureAndRelease.csproj') -c Release -o $outputDirectory "-p:BaseIntermediateOutputPath=$buildDirectory\obj-local-screen\" --ignore-failed-sources
+    if($LASTEXITCODE -ne 0){throw 'The .NET build failed'}
+} finally {Pop-Location}
 $vswhere=Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 $vs=& $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if(!$vs){throw 'Install Visual Studio C++ desktop build tools and a recent Windows SDK'}
@@ -19,4 +22,4 @@ $lines=@('@echo off',"call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul",'if err
 [IO.File]::WriteAllLines($nativeScript,$lines)
 & $env:ComSpec /c "`"$nativeScript`""
 if($LASTEXITCODE -ne 0){throw 'The native application-audio helper build failed'}
-Write-Output 'Built CaptureAndRelease.exe. Install FFmpeg separately with Install-RecordingTools.ps1.'
+Write-Output 'Built CaptureAndRelease.exe. Keep the tested FFmpeg/ffprobe tools alongside ProcessAudio.exe in app/tools; see THIRD_PARTY_NOTICES.md.'

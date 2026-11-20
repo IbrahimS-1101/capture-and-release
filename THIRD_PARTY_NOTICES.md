@@ -2,7 +2,7 @@
 
 ## Capture & Release
 
-Copyright (c) 2026 **Ibrahim Samir**. Application source, the native audio helper, setup/build scripts and original artwork are licensed under **GPL-3.0-only**; see [LICENSE](LICENSE). Developed with assistance from OpenAI Codex. No OpenAI service or SDK is required to run the recorder.
+Copyright (c) 2026 **Ibrahim Samir**. Application source, the native audio helper, setup/build scripts and original artwork are licensed under **GPL-3.0-only**; see [LICENSE](LICENSE). Developed with assistance from OpenAI Codex. No OpenAI service or SDK is required to run the application. The CRT shader and its native adaptation are original project code under the same license; rendering uses the separately obtained FFmpeg libplacebo/Vulkan integration.
 
 The source for the application and native helper accompanies the binary release and is available at https://github.com/IbrahimS-1101/capture-and-release. The application is provided without warranty under the license.
 
@@ -25,7 +25,7 @@ This build identifies its license as GPLv3 and contains separately credited libr
 
 ## Microsoft technologies
 
-The UI uses **.NET Windows Forms**. The .NET 9 Desktop Runtime is installed separately from Microsoft and is not bundled in the release. .NET project notices: https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT and https://github.com/dotnet/winforms/blob/main/LICENSE.TXT.
+The UI uses **.NET Windows Forms** and WPF MediaElement/ElementHost for in-app playback. The .NET 10 Desktop Runtime is installed separately from Microsoft and is not bundled in the release. .NET project notices: https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT and https://github.com/dotnet/winforms/blob/main/LICENSE.TXT.
 
 `ProcessAudio.exe` is built from the accompanying original `source/ProcessAudio.cpp` with Microsoft Visual C++ and a statically linked Visual C++ runtime. Microsoft components retain their applicable Microsoft license terms. Windows APIs and the Windows SDK are not re-licensed by this project's GPL notice.
 

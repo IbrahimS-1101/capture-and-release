@@ -8,6 +8,25 @@ internal static class Program
     static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+        if(args.Contains("--setup-check")){SetupTests.RunAsync(args[Array.IndexOf(args,"--setup-check")+1]).GetAwaiter().GetResult();return;}
+        if(args.Contains("--release-checks")){
+            using var form=new CrtForm(testing:true);form.Shown+=async(_,_)=>await form.RunReleaseChecksAsync(args);Application.Run(form);return;
+        }
+        if(args.Contains("--listen-self-test")){
+            using var form=new CrtForm(testing:true);
+            form.Shown+=async(_,_)=>await form.RunAudioListenSelfTestAsync(args);
+            Application.Run(form);return;
+        }
+        if(args.Contains("--feedback-tests")){FeedbackTests.RunAsync(args).GetAwaiter().GetResult();return;}
+        if(args.Contains("--editing-tests")){EditingTests.RunAsync(args).GetAwaiter().GetResult();return;}
+        if(args.Contains("--crt-export-tests")){CrtExportTests.RunAsync(args).GetAwaiter().GetResult();return;}
+        if(args.Contains("--video-tools")||args.Contains("--crt-preview")){Application.Run(new CrtForm());return;}
+        if(args.Contains("--trim-tests")){TrimTests.RunAsync(args).GetAwaiter().GetResult();return;}
+        if(args.Contains("--crt-self-test")){
+            using var form=new CrtForm(testing:true);
+            form.Shown+=async(_,_)=>await form.RunSelfTestAsync(args);
+            Application.Run(form);return;
+        }
         if(args.Contains("--render-about")) {
             using var dialog=new AboutForm();
             dialog.Shown+=(_,_)=>{using var bitmap=new Bitmap(dialog.Width,dialog.Height);dialog.DrawToBitmap(bitmap,new Rectangle(0,0,dialog.Width,dialog.Height));bitmap.Save(args[Array.IndexOf(args,"--render-about")+1]);dialog.Close();};
@@ -47,6 +66,7 @@ public class MainForm : Form
     readonly CheckBox compatibility=new(){Text="Compatibility capture",AutoSize=true},cursor=new(){Text="Include pointer",AutoSize=true};
     readonly TextBox folder=new(){ReadOnly=true};
     readonly Button start=new(){Text="Start recording",AutoSize=true},previewButton=new(){Text="Check preview",AutoSize=true},refresh=new(){Text="Refresh applications",AutoSize=true},browse=new(){Text="Choose folder…",AutoSize=true};
+    readonly Button crtPreview=new(){Text="Video tools…",AutoSize=true};
     readonly Label status=new(){Dock=DockStyle.Fill,Text="Ready",ForeColor=Color.FromArgb(42,92,78),AutoEllipsis=true},timerText=new(){AutoSize=true,Text="00:00:00"};
     readonly Label instructions=new(){Dock=DockStyle.Fill,ForeColor=Color.FromArgb(76,86,99),Padding=new Padding(0,5,0,0)};
     readonly PictureBox preview=new(){Dock=DockStyle.Fill,SizeMode=PictureBoxSizeMode.Zoom,BackColor=Color.FromArgb(233,237,241)};
@@ -54,7 +74,8 @@ public class MainForm : Form
     readonly NotifyIcon tray=new(){Icon=SystemIcons.Application,Text="Capture & Release",Visible=true};
     readonly System.Windows.Forms.Timer timer=new(){Interval=500};
     readonly List<Control> settings=new();
-    readonly string preferencesPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CaptureAndRelease","settings.json");
+    readonly string preferencesPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CaptureAndRelease-VideoTools","settings.json");
+    readonly string releasePreferencesPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"CaptureAndRelease","settings.json");
     readonly string previousPreferencesPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"LocalScreenRecorder","settings.json");
     readonly string legacyPreferencesPath=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"GameplayRecorder","settings.json");
     Recorder? recorder;
@@ -67,7 +88,7 @@ public class MainForm : Form
     public MainForm(bool testing=false)
     {
         this.testing=testing;
-        Text="Capture & Release · 0.3.0"; Font=new Font("Segoe UI",10); BackColor=Color.FromArgb(247,249,251);
+        Text="Capture & Release · 0.4.0 beta 1"; Font=new Font("Segoe UI",10); BackColor=Color.FromArgb(247,249,251);
         Icon=System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!)??SystemIcons.Application;tray.Icon=Icon;
         ClientSize=new Size(900,780); MinimumSize=new Size(780,740); StartPosition=FormStartPosition.CenterScreen;
         var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=9,Padding=new Padding(26)};
@@ -97,7 +118,9 @@ public class MainForm : Form
         box.Controls.Add(preview);preview.Controls.Add(previewHint);root.Controls.Add(box,0,6);
         var bottom=new FlowLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(0,14,0,0),WrapContents=false};
         start.BackColor=Color.FromArgb(34,107,87);start.ForeColor=Color.White;start.FlatStyle=FlatStyle.Flat;start.Padding=new Padding(12,3,12,3);
-        bottom.Controls.AddRange(new Control[]{start,previewButton,timerText});root.Controls.Add(bottom,0,7);
+        var crt=crtPreview;settings.Add(crt);
+        crt.Click+=(_,_)=>{if(busy||recorder!=null||countdown!=null)return;if(hotkeyRegistered){Native.UnregisterHotKey(Handle,1);hotkeyRegistered=false;}try{using var dialog=new CrtForm();dialog.ShowDialog(this);}finally{RegisterShortcut();}};
+        bottom.Controls.AddRange(new Control[]{start,previewButton,crt,timerText});root.Controls.Add(bottom,0,7);
         root.Controls.Add(status,0,8);
         // A separate compact settings row stays accessible without crowding the preview.
         var shortcuts=new FlowLayoutPanel{Dock=DockStyle.Bottom,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,MinimumSize=new Size(0,43),Padding=new Padding(26,0,26,8),WrapContents=true};
@@ -106,6 +129,7 @@ public class MainForm : Form
         shortcuts.Controls.AddRange(new Control[]{new Label{Text="Start / stop",AutoSize=true,Padding=new Padding(0,5,5,0)},hotkey,new Label{Text="Countdown (seconds)",AutoSize=true,Padding=new Padding(12,5,5,0)},delay});
         var open=new Button{Text="Open recordings",AutoSize=true};shortcuts.Controls.Add(open);
         var recover=new Button{Text="Recover recording…",AutoSize=true};shortcuts.Controls.Add(recover);settings.Add(recover);
+        foreach(var utility in new[]{refresh,browse,previewButton,crt,open,recover,about}){utility.FlatStyle=FlatStyle.Flat;utility.FlatAppearance.BorderColor=Color.FromArgb(210,218,225);utility.FlatAppearance.BorderSize=1;utility.BackColor=Color.White;utility.ForeColor=Color.FromArgb(40,54,65);}
         Controls.Add(shortcuts);shortcuts.SendToBack();
         settings.AddRange(new Control[]{games,refresh,mode,monitors,fps,quality,encoder,compatibility,cursor,folder,browse,previewButton,hotkey,delay});
         LoadPreferences(); RefreshGames();UpdateSourceHint();
@@ -213,7 +237,7 @@ public class MainForm : Form
     }
     void ResetIdle(bool preserveStatus=false)
     {
-        SetSettings(true);start.Enabled=true;start.Text="Start recording";Text="Capture & Release · 0.3.0";tray.Text="Capture & Release";
+        SetSettings(true);start.Enabled=true;start.Text="Start recording";Text="Capture & Release · 0.4.0 beta 1";tray.Text="Capture & Release";
         if(!preserveStatus && status.Text.StartsWith("Starting")) status.Text="Ready";
     }
     async Task PreviewAsync()
@@ -259,7 +283,7 @@ public class MainForm : Form
     }
     void LoadPreferences()
     {
-        try{string path=File.Exists(preferencesPath)?preferencesPath:File.Exists(previousPreferencesPath)?previousPreferencesPath:legacyPreferencesPath;if(!File.Exists(path))return;
+        try{string path=File.Exists(preferencesPath)?preferencesPath:File.Exists(releasePreferencesPath)?releasePreferencesPath:File.Exists(previousPreferencesPath)?previousPreferencesPath:legacyPreferencesPath;if(!File.Exists(path))return;
             var p=JsonSerializer.Deserialize<Preferences>(File.ReadAllText(path));if(p==null)return;
             if(!string.IsNullOrWhiteSpace(p.Folder))folder.Text=p.Folder;fps.SelectedIndex=p.Fps==60?1:0;
             quality.SelectedIndex=p.Height==720?2:p.Height>1080?3:p.Crf==19?1:0;delay.Value=Math.Clamp(p.Delay,0,30);
@@ -312,6 +336,13 @@ public class MainForm : Form
                 hotkey.SelectedItem=candidate;if(hotkeyRegistered)break;
             }
             if(!hotkeyRegistered)throw new Exception("No test shortcut could be registered");
+            bool shortcutPaused=false;
+            using(var closeCrt=new System.Windows.Forms.Timer{Interval=150}){
+                closeCrt.Tick+=(_,_)=>{var dialog=Application.OpenForms.OfType<CrtForm>().FirstOrDefault();if(dialog==null)return;shortcutPaused=!hotkeyRegistered;dialog.Close();closeCrt.Stop();};
+                closeCrt.Start();crtPreview.PerformClick();
+            }
+            if(!shortcutPaused||!hotkeyRegistered)throw new Exception("CRT dialog did not pause/restore the recorder shortcut");
+            report["crtDialogPausesAndRestoresShortcut"]=true;
             scene=Process.Start(new ProcessStartInfo(Environment.ProcessPath!){UseShellExecute=false,ArgumentList={"--test-scene","--tone=440"}})!;
             await Task.Delay(1500);RefreshGames();
             games.SelectedItem=games.Items.Cast<GameWindow>().First(w=>w.Pid==scene.Id);
@@ -328,7 +359,7 @@ public class MainForm : Form
             report["countdownCancellation"]=true;
             Native.GetWindowRect(game.Handle,out var before);var foreground=Native.GetForegroundWindow();
             delay.Value=0;Native.PostMessage(Handle,0x0312,1,0);await Until(()=>recorder?.Active==true);
-            if(start.Text!="Stop & save" || games.Enabled)throw new Exception("Incorrect recording controls");
+            if(start.Text!="Stop & save" || games.Enabled || crtPreview.Enabled)throw new Exception("Incorrect recording controls");
             await Task.Delay(2500);Native.PostMessage(Handle,0x0312,1,0);await Until(()=>!busy && recorder==null);
             if(lastOutput==null || !File.Exists(lastOutput))throw new Exception("Shortcut stop did not save a video");
             Native.GetWindowRect(game.Handle,out var after);

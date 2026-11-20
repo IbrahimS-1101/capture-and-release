@@ -1,0 +1,22 @@
+{
+  "sourceSize": [0, 0],
+  "contentRect": [0, 0, 1, 1],
+  "curvatureEnabled": false,
+  "curvatureAmount": [0.0204081633, 0.0204081633],
+  "curvatureScale": 1.02,
+  "softeningEnabled": true,
+  "softeningRadius": 0.5,
+  "softeningStrength": 0.2,
+  "scanlinesEnabled": true,
+  "scanlineCount": 400,
+  "scanlineStrength": 0.25,
+  "scanlineFadeStart": 0.3,
+  "scanlineFadeEnd": 0.5,
+  "maskEnabled": true,
+  "maskColumns": 640,
+  "maskRows": 400,
+  "maskStrength": 1,
+  "bloomEnabled": true,
+  "bloomRadius": [2.5, 2],
+  "bloomStrength": 0.35
+}

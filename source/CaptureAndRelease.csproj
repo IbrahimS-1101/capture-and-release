@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>CaptureAndRelease</AssemblyName>
@@ -15,6 +16,11 @@
     <DebugType>none</DebugType>
     <Deterministic>true</Deterministic>
     <PathMap>$(MSBuildProjectDirectory)=/_/source</PathMap>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
+    <InformationalVersion>0.4.0-beta.1</InformationalVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Include="System.IO" />
+    <Content Include="shaders\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
